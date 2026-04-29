@@ -1,0 +1,77 @@
+# GitHub Actions workflow that runs on every push and pull request.
+# What it does:
+#   1. Spins up Postgres + Redis as service containers (same versions as
+#      docker-compose.yml so CI mirrors local dev).
+#   2. Installs Python 3.11 and the project + dev deps.
+#   3. Runs ruff (linter), black --check (formatter), mypy (type check), pytest.
+# If any step fails, the commit is marked red on GitHub.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Service containers run alongside the main job in their own Docker
+    # containers and are reachable on localhost from the steps below.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: snip
+          POSTGRES_PASSWORD: snip_dev_password
+          POSTGRES_DB: snip
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U snip"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # Cache pip downloads between runs to speed up CI.
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint with ruff
+        run: ruff check .
+
+      - name: Check formatting with black
+        run: black --check .
+
+      - name: Type-check with mypy
+        run: mypy app/
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://snip:snip_dev_password@localhost:5432/snip
+          REDIS_URL: redis://localhost:6379/0
+        run: pytest -v

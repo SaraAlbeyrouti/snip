@@ -1,0 +1,34 @@
+services:
+  # PostgreSQL — the source-of-truth database.
+  postgres:
+    image: postgres:16-alpine
+    container_name: snip-postgres
+    environment:
+      POSTGRES_USER: snip
+      POSTGRES_PASSWORD: snip_dev_password
+      POSTGRES_DB: snip
+    ports:
+      - "5432:5432"
+    volumes:
+      - snip_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U snip"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis — in-memory cache for short_code -> long_url lookups on the redirect path.
+  # No password needed locally; production uses managed Redis with auth.
+  redis:
+    image: redis:7-alpine
+    container_name: snip-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  snip_postgres_data:

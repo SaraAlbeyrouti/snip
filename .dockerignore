@@ -1,0 +1,46 @@
+# Anything in this file is excluded from the Docker build context — i.e., it
+# never gets copied into the image, regardless of what the Dockerfile says.
+# Keep this aggressive: less context = faster builds and smaller images.
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Local Python venv (we build a fresh venv in the image)
+.venv
+venv
+
+# Bytecode and caches
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# IDE / editor metadata
+.idea
+.vscode
+.DS_Store
+
+# Local environment files (production gets env vars from the host)
+.env
+.env.local
+
+# Frontend (has its own image)
+web
+node_modules
+
+# Documentation and dev-only files
+README.md
+docs
+
+# Tests are not needed in the runtime image (they run in CI)
+tests
+
+# Build artifacts
+dist
+build
+*.egg-info
