@@ -18,7 +18,7 @@ Lifecycle:
     connection per request would be wasteful.
 """
 
-from typing import Optional
+from typing import Optional, cast
 
 from redis.asyncio import Redis, from_url
 
@@ -62,10 +62,10 @@ async def get_long_url(short_code: str) -> Optional[str]:
     """Return the cached long URL for a short code, or None on cache miss."""
     if _client is None:
         return None  # Cache not initialized — fall back to DB.
-    # redis-py's stubs type .get() as returning Any. We assign to a typed
-    # local so mypy knows the function's return type matches its annotation.
-    cached: Optional[str] = await _client.get(_key(short_code))
-    return cached
+    # redis-py's .get() is typed as bytes | str | None because decode_responses
+    # is a runtime flag mypy can't see. We set decode_responses=True in
+    # init_redis(), so the value is always str | None — cast tells mypy that.
+    return cast(Optional[str], await _client.get(_key(short_code)))
 
 
 async def set_long_url(short_code: str, long_url: str) -> None:
